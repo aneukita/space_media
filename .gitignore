@@ -1,0 +1,11 @@
+# 認証情報(絶対にコミットしない)
+.env
+credentials/
+*.json
+
+# 実行時に生成されるもの
+logs/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
