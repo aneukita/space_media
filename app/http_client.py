@@ -51,8 +51,17 @@ class HttpClient:
 
     def get(self, url: str) -> HttpResponse:
         """GETして応答を返す。4xx/5xxは例外にせず、statusで呼び出し側が判断する。"""
-        if not self._allowed(url):
-            raise RobotsDisallowed("robots.txtにより取得が許可されていません: {}".format(url))
+        parts = urlsplit(url)
+        origin = "{}://{}".format(parts.scheme, parts.netloc)
+        if origin not in self._robots:
+            self._robots[origin] = self._load_robots(origin)
+        parser = self._robots[origin]
+        if parser is None:
+            raise RobotsDisallowed(
+                "{}/robots.txt を確認できないため(取得失敗またはサーバーエラー)、取得を控えました: {}".format(origin, url)
+            )
+        if not parser.can_fetch(self.user_agent, url):
+            raise RobotsDisallowed("サイトのrobots.txtで、このURLへの自動取得が禁止されています: {}".format(url))
         return self._request(url)
 
     def _request(self, url: str) -> HttpResponse:
@@ -80,14 +89,6 @@ class HttpClient:
         if elapsed < self.interval:
             time.sleep(self.interval - elapsed)
         self._last_request[host] = time.monotonic()
-
-    def _allowed(self, url: str) -> bool:
-        parts = urlsplit(url)
-        origin = "{}://{}".format(parts.scheme, parts.netloc)
-        if origin not in self._robots:
-            self._robots[origin] = self._load_robots(origin)
-        parser = self._robots[origin]
-        return parser is not None and parser.can_fetch(self.user_agent, url)
 
     def _load_robots(self, origin: str) -> Optional[RobotFileParser]:
         """RFC 9309に従う: 4xxは制限なし、取得不能や5xxは全面禁止(None)として扱う。"""

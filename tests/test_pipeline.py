@@ -1,4 +1,5 @@
 """Test 1, 3, 6, 7, 8, 9: 読み込み〜書き戻し〜保存〜重複排除〜エラー継続。"""
+from app.http_client import RobotsDisallowed
 from app.main import run
 from app.normalizer.url import normalize_url
 from app.repositories.memory import MemoryArticleRepository, MemorySourceRepository
@@ -100,3 +101,20 @@ def test_temporary_failure_keeps_flag_and_method(http, config, logger):
     http.add(FEED, RSS_XML, content_type="application/rss+xml")
     run(sources, articles, http, config, logger)
     assert source.has_error is False and source.notes.startswith("RSS利用可能")
+
+
+def test_robots_disallowed_source_is_flagged_with_reason(http, config, logger):
+    http.pages[HOME] = RobotsDisallowed("サイトのrobots.txtで、このURLへの自動取得が禁止されています: {}".format(HOME))
+    source = make_source()
+    run(MemorySourceRepository([source]), MemoryArticleRepository(), http, config, logger)
+
+    assert source.has_error is True
+    assert source.notes.startswith("ERROR: アクセスできません (理由: サイトのrobots.txt")
+
+
+def test_non_url_source_is_flagged_with_reason(http, config, logger):
+    source = make_source(url="東京理科大学")
+    run(MemorySourceRepository([source]), MemoryArticleRepository(), http, config, logger)
+
+    assert source.has_error is True
+    assert source.notes == "ERROR: アクセスできません (理由: urlがURLの形式ではありません: 東京理科大学)"

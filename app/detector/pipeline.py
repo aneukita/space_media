@@ -4,7 +4,7 @@ from app.detector.api_detector import detect_api
 from app.detector.result import FOUND, UNKNOWN
 from app.detector.rss_detector import detect_rss
 from app.detector.web_detector import detect_web
-from app.http_client import FetchError, HttpClient
+from app.http_client import FetchError, HttpClient, RobotsDisallowed
 from app.models import METHOD_API, METHOD_RSS, METHOD_WEB, Source, SourceResult
 
 NOTE_RSS = "RSS利用可能"
@@ -17,8 +17,12 @@ def _error(reason: str) -> SourceResult:
 
 
 def detect_source(source: Source, http: HttpClient, config: Config) -> SourceResult:
+    if not source.url.startswith(("http://", "https://")):
+        return SourceResult("", "", True, "ERROR: アクセスできません (理由: urlがURLの形式ではありません: {})".format(source.url))
     try:
         page = http.get(source.url)
+    except RobotsDisallowed as exc:
+        return SourceResult("", "", True, "ERROR: アクセスできません (理由: {})".format(exc))
     except FetchError as exc:
         return _error("情報源URLを取得できません: {}".format(exc))
     if page.status != 200:
