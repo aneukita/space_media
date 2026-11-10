@@ -78,12 +78,12 @@ def process_source(
             raise CollectError(result.notes)
         source.feed_url, source.fetch_method = result.feed_url, result.fetch_method
 
-    articles = normalize_articles(_collect(source, http, config), source)
+    articles = normalize_articles(_collect(source, http, config), source, config.summary_max_length)
     new_articles = _select_new(articles, known_urls)
     # フィードは新しい順に並ぶので、シートには古い順に追記する
     new_articles.reverse()
     if source.fetch_method == METHOD_WEB and config.web_fetch_meta_description:
-        fill_summaries(new_articles, http)
+        fill_summaries(new_articles, http, config.summary_max_length)
     article_repo.add_articles(new_articles)
 
     stats.fetched += len(articles)

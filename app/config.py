@@ -23,6 +23,7 @@ class Config:
     max_articles_per_source: int = 30
     rss_crawl_max_pages: int = 100
     web_min_article_links: int = 3
+    summary_max_length: int = 100
     web_fetch_meta_description: bool = True
     http_timeout: float = 15.0
     http_retries: int = 2
@@ -49,6 +50,7 @@ def load_config() -> Config:
         token_file=_path(env("GOOGLE_TOKEN_FILE", "credentials/token.json")),
         max_articles_per_source=int(env("MAX_ARTICLES_PER_SOURCE", default.max_articles_per_source)),
         rss_crawl_max_pages=int(env("RSS_CRAWL_MAX_PAGES", default.rss_crawl_max_pages)),
+        summary_max_length=int(env("SUMMARY_MAX_LENGTH", default.summary_max_length)),
         web_min_article_links=int(env("WEB_MIN_ARTICLE_LINKS", default.web_min_article_links)),
         web_fetch_meta_description=_bool(env("WEB_FETCH_META_DESCRIPTION", "true")),
         http_timeout=float(env("HTTP_TIMEOUT", default.http_timeout)),

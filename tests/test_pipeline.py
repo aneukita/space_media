@@ -118,3 +118,28 @@ def test_non_url_source_is_flagged_with_reason(http, config, logger):
 
     assert source.has_error is True
     assert source.notes == "ERROR: アクセスできません (理由: urlがURLの形式ではありません: 東京理科大学)"
+
+
+def test_summary_is_cut_at_sentence_boundary():
+    from app.normalizer.summary import make_summary
+    text = "あ" * 60 + "。" + "い" * 30 + "。" + "う" * 30 + "。"
+    assert make_summary(text, 100) == "あ" * 60 + "。" + "い" * 30 + "。"
+    assert make_summary("短い概要。", 100) == "短い概要。"
+    long_sentence = "え" * 150
+    assert make_summary(long_sentence, 100) == "え" * 99 + "…"
+
+
+def test_summary_falls_back_to_content():
+    from app.models import RawArticle
+    from app.normalizer.article import normalize_article
+    raw = RawArticle(title="t", url="https://example.com/a", content="<p>本文の一文目です。本文の二文目です。</p>")
+    article = normalize_article(raw, make_source(), 12)
+    assert article.summary == "本文の一文目です。"
+    assert article.content == "本文の一文目です。本文の二文目です。"
+
+
+def test_summary_prefers_content_over_description():
+    from app.models import RawArticle
+    from app.normalizer.article import normalize_article
+    raw = RawArticle(title="t", url="https://example.com/a", summary="RSSの概要文です。", content="本文の一文目です。本文の二文目です。")
+    assert normalize_article(raw, make_source(), 100).summary == "本文の一文目です。本文の二文目です。"

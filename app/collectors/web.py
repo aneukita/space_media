@@ -4,6 +4,8 @@ from typing import List
 from app.collectors.errors import CollectError
 from app.detector.web_detector import extract_articles, extract_meta_description
 from app.http_client import FetchError, HttpClient
+from app.normalizer.article import clean_text
+from app.normalizer.summary import make_summary
 from app.models import Article, RawArticle, Source
 
 
@@ -14,7 +16,7 @@ def collect_web(source: Source, http: HttpClient, limit: int) -> List[RawArticle
     return extract_articles(response)[:limit]
 
 
-def fill_summaries(articles: List[Article], http: HttpClient) -> None:
+def fill_summaries(articles: List[Article], http: HttpClient, summary_limit: int = 100) -> None:
     """新規記事のsummaryを記事ページのmeta descriptionで埋める。取れなければ空欄のまま。"""
     for article in articles:
         if article.summary:
@@ -24,4 +26,4 @@ def fill_summaries(articles: List[Article], http: HttpClient) -> None:
         except FetchError:
             continue
         if response.status == 200 and "html" in response.content_type:
-            article.summary = extract_meta_description(response)
+            article.summary = make_summary(clean_text(extract_meta_description(response)), summary_limit)
